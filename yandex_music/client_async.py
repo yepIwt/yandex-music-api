@@ -2492,6 +2492,43 @@ class ClientAsync(YandexMusicObject):
 
         return result.get('id')
 
+    @log
+    async def music_history(self, *args: Any, **kwargs: Any) -> List[Track]:
+        """Получение истории прослушиваний.
+
+        Args:
+            *args: Произвольные аргументы (будут переданы в запрос).
+            **kwargs: Произвольные именованные аргументы (будут переданы в запрос).
+
+        Returns:
+            :obj:`list` из :obj:`yandex_music.Track`: Список треков из истории прослушиваний.
+
+        Raises:
+            :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
+        """
+        url = f'{self.base_url}/music-history'
+
+        params = {
+            'fullModelsCount': 999999999,
+        }
+
+        result = await self._request.get(url, *args, params=params, **kwargs)
+
+        tracks_data = []
+        history_tabs = result.get('history_tabs', [])
+
+        for tab in history_tabs:
+            items = tab.get('items', [])
+            for item in items:
+                tracks = item.get('tracks', [])
+                for track_item in tracks:
+                    if track_item.get('type') == 'track':
+                        full_model = track_item.get('data', {}).get('full_model')
+                        if full_model:
+                            tracks_data.append(full_model)
+
+        return Track.de_list(tracks_data, self)
+
     # camelCase псевдонимы
 
     #: Псевдоним для :attr:`account_status`
@@ -2618,3 +2655,5 @@ class ClientAsync(YandexMusicObject):
     queueUpdatePosition = queue_update_position
     #: Псевдоним для :attr:`queue_create`
     queueCreate = queue_create
+    #: Псевдоним для :attr:`music_history`
+    musicHistory = music_history
