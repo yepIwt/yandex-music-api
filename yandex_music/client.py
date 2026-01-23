@@ -15,6 +15,7 @@ from yandex_music import (
     Experiments,
     Feed,
     Genre,
+    HistoryTab,
     Landing,
     LandingList,
     Like,
@@ -2477,10 +2478,11 @@ class Client(YandexMusicObject):
         return result.get('id')
 
     @log
-    def music_history(self, *args: Any, **kwargs: Any) -> List[Track]:
+    def music_history(self, full_models_count: int = 999999999, *args: Any, **kwargs: Any) -> List[Track]:
         """Получение истории прослушиваний.
 
         Args:
+            full_models_count (:obj:`int`, optional): Количество полных моделей для получения.
             *args: Произвольные аргументы (будут переданы в запрос).
             **kwargs: Произвольные именованные аргументы (будут переданы в запрос).
 
@@ -2493,25 +2495,13 @@ class Client(YandexMusicObject):
         url = f'{self.base_url}/music-history'
 
         params = {
-            'fullModelsCount': 999999999,
+            'fullModelsCount': full_models_count,
         }
 
         result = self._request.get(url, *args, params=params, **kwargs)
 
-        tracks_data = []
-        history_tabs = result.get('history_tabs', [])
-
-        for tab in history_tabs:
-            items = tab.get('items', [])
-            for item in items:
-                tracks = item.get('tracks', [])
-                for track_item in tracks:
-                    if track_item.get('type') == 'track':
-                        full_model = track_item.get('data', {}).get('full_model')
-                        if full_model:
-                            tracks_data.append(full_model)
-
-        return Track.de_list(tracks_data, self)
+        history_tabs = HistoryTab.de_list(result.get('history_tabs'), self)
+        return HistoryTab.extract_tracks(history_tabs)
 
     # camelCase псевдонимы
 
